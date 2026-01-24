@@ -7,7 +7,7 @@ const GENRES = [
         title: 'Programming',
         description: 'Master code, logic, and algorithms.',
         icon: '🤖',
-        path: '/apps/programming/index.html',
+        path: 'apps/programming/index.html',
         color: 'var(--accent-blue)'
     },
     {
