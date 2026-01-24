@@ -283,7 +283,7 @@ ${topicsStr}
                 <nav>
                     <button onClick={() => setView('dashboard')} className={view === 'dashboard' ? 'active' : ''}>ホーム</button>
                     <button onClick={() => setView('settings')} className={view === 'settings' ? 'active' : ''}>設定</button>
-                    <button onClick={() => window.location.href = '/'} className="btn-portal">ジャンル選択へ</button>
+                    <button onClick={() => window.location.href = '../../index.html'} className="btn-portal">ジャンル選択へ</button>
                 </nav>
             </header>
 
