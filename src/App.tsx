@@ -50,6 +50,7 @@ function App() {
     // プロンプトの自動生成ロジック
     useEffect(() => {
         const topicsStr = selectedTopics.length > 0 ? `テーマは「${selectedTopics.join(', ')}」に関連させてください。` : ""
+        const titleTopics = selectedTopics.length > 0 ? ` - ${selectedTopics.join('/')}` : ""
         const prompt = `
 プログラミング言語「${selectedLang}」の学習用クイズを、難易度「${difficulty}」で5問作成してください。
 ${topicsStr}
@@ -58,7 +59,7 @@ ${topicsStr}
 回答形式は以下のJSONフォーマットのみを返してください。解説等は不要です。
 
 {
-  "title": "${selectedLang}クイズ (${difficulty})",
+  "title": "${selectedLang}クイズ (${difficulty}${titleTopics})",
   "language": "${selectedLang}",
   "difficulty": "${difficulty}",
   "questions": [
