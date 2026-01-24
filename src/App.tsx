@@ -27,6 +27,8 @@ function App() {
     const [quizzes, setQuizzes] = useState<Quiz[]>([])
     const [view, setView] = useState<'dashboard' | 'create' | 'play' | 'settings'>('dashboard')
     const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_api_key') || '')
+    const [selectedModel, setSelectedModel] = useState(localStorage.getItem('gemini_model') || 'gemini-1.5-flash')
+
 
     // 生成・プレイ用状態
     const [selectedLang, setSelectedLang] = useState<'C' | 'python' | 'VBA'>('python')
@@ -51,6 +53,7 @@ function App() {
         const prompt = `
 プログラミング言語「${selectedLang}」の学習用クイズを、難易度「${difficulty}」で5問作成してください。
 ${topicsStr}
+※正解の選択肢の位置（answerIndex）が特定の番号に偏らないよう、問題ごとにランダムに変更してください。
 
 回答形式は以下のJSONフォーマットのみを返してください。解説等は不要です。
 
@@ -97,9 +100,25 @@ ${topicsStr}
         }
         setIsGenerating(true)
         try {
-            const data = await generateQuizFromPrompt(apiKey, customPrompt)
+            const data = await generateQuizFromPrompt(apiKey, customPrompt, selectedModel)
+
+            // 選択肢と正解インデックスをランダムにシャッフルする
+            const randomizedQuestions = data.questions.map((q: any) => {
+                const optionsWithIndex = q.options.map((opt: string, i: number) => ({ opt, isCorrect: i === q.answerIndex }));
+                for (let i = optionsWithIndex.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [optionsWithIndex[i], optionsWithIndex[j]] = [optionsWithIndex[j], optionsWithIndex[i]];
+                }
+                return {
+                    ...q,
+                    options: optionsWithIndex.map((o: any) => o.opt),
+                    answerIndex: optionsWithIndex.findIndex((o: any) => o.isCorrect)
+                };
+            });
+
             const newQuiz: Quiz = {
                 ...data,
+                questions: randomizedQuestions,
                 id: crypto.randomUUID(),
                 createdAt: Date.now()
             }
@@ -109,8 +128,10 @@ ${topicsStr}
             setCurrentQuiz(newQuiz)
             setView('play')
             resetQuiz()
-        } catch (e) {
-            alert('生成に失敗しました。プロンプトの内容やAPIキーを確認してください。')
+        } catch (e: any) {
+            console.error('Quiz Generation Error Details:', e);
+            const errorMsg = e.message || '不明なエラー';
+            alert(`生成に失敗しました。\n原因: ${errorMsg}\n\nAPIキーや通信状態、プロンプトの内容を確認してください。`);
         } finally {
             setIsGenerating(false)
         }
@@ -365,6 +386,25 @@ ${topicsStr}
                                 </button>
                             </div>
                             <p className="hint">※キーはブラウザのlocalStorageに保存され、問題生成時のみ使用されます。</p>
+                        </div>
+
+                        <div className="form-group">
+                            <label>使用するモデル</label>
+                            <select
+                                value={selectedModel}
+                                onChange={(e) => {
+                                    setSelectedModel(e.target.value);
+                                    localStorage.setItem('gemini_model', e.target.value);
+                                }}
+                                className="model-select"
+                            >
+                                <option value="gemini-1.5-flash-latest">Gemini 1.5 Flash (推奨・安定)</option>
+                                <option value="gemini-1.5-pro-latest">Gemini 1.5 Pro (高精度)</option>
+                                <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                                <option value="gemini-2.5-flash">Gemini 2.5 Flash (最新・高速)</option>
+                                <option value="gemini-2.5-pro">Gemini 2.5 Pro (最新・最高性能)</option>
+                            </select>
+                            <p className="hint">※2026年現在の最新モデル（2.5系）も無料枠で利用可能です。エラーが出る場合は「latest」が付いたモデルをお試しください。</p>
                         </div>
                         <button className="save-back-btn" onClick={() => setView('dashboard')}>戻る</button>
                     </div>
