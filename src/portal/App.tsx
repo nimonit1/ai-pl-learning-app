@@ -1,5 +1,3 @@
-import React from 'react'
-
 /**
  * ジャンル選択カードのデータ定義
  */

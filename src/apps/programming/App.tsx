@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { generateQuizFromPrompt } from '../../shared/lib/gemini'
 import { processQuizData, shuffleQuestion } from '../../shared/lib/quizUtils'
 import { DEFAULT_PROGRAMMING_QUIZZES } from './defaultQuizzes'
