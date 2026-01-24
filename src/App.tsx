@@ -41,6 +41,9 @@ function App() {
     const [score, setScore] = useState(0)
     const [showResult, setShowResult] = useState(false)
     const [userAnswer, setUserAnswer] = useState<number | null>(null)
+    const [pasteText, setPasteText] = useState('')
+    const [isPasting, setIsPasting] = useState(false)
+
 
     useEffect(() => {
         const saved = localStorage.getItem('ai_quizzes')
@@ -102,27 +105,8 @@ ${topicsStr}
         setIsGenerating(true)
         try {
             const data = await generateQuizFromPrompt(apiKey, customPrompt, selectedModel)
+            const newQuiz = processQuizData(data)
 
-            // 選択肢と正解インデックスをランダムにシャッフルする
-            const randomizedQuestions = data.questions.map((q: any) => {
-                const optionsWithIndex = q.options.map((opt: string, i: number) => ({ opt, isCorrect: i === q.answerIndex }));
-                for (let i = optionsWithIndex.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [optionsWithIndex[i], optionsWithIndex[j]] = [optionsWithIndex[j], optionsWithIndex[i]];
-                }
-                return {
-                    ...q,
-                    options: optionsWithIndex.map((o: any) => o.opt),
-                    answerIndex: optionsWithIndex.findIndex((o: any) => o.isCorrect)
-                };
-            });
-
-            const newQuiz: Quiz = {
-                ...data,
-                questions: randomizedQuestions,
-                id: crypto.randomUUID(),
-                createdAt: Date.now()
-            }
             const updated = [newQuiz, ...quizzes]
             setQuizzes(updated)
             localStorage.setItem('ai_quizzes', JSON.stringify(updated))
@@ -135,6 +119,57 @@ ${topicsStr}
             alert(`生成に失敗しました。\n原因: ${errorMsg}\n\nAPIキーや通信状態、プロンプトの内容を確認してください。`);
         } finally {
             setIsGenerating(false)
+        }
+    }
+
+    const handleCopyPrompt = () => {
+        navigator.clipboard.writeText(customPrompt).then(() => {
+            alert('プロンプトをクリップボードにコピーしました！')
+        }).catch(err => {
+            alert('コピーに失敗しました。')
+        })
+    }
+
+    const processQuizData = (data: any) => {
+        // 選択肢と正解インデックスをランダムにシャッフルする共通ロジック
+        const randomizedQuestions = data.questions.map((q: any) => {
+            const optionsWithIndex = q.options.map((opt: string, i: number) => ({ opt, isCorrect: i === q.answerIndex }));
+            for (let i = optionsWithIndex.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [optionsWithIndex[i], optionsWithIndex[j]] = [optionsWithIndex[j], optionsWithIndex[i]];
+            }
+            return {
+                ...q,
+                options: optionsWithIndex.map((o: any) => o.opt),
+                answerIndex: optionsWithIndex.findIndex((o: any) => o.isCorrect)
+            };
+        });
+
+        return {
+            ...data,
+            questions: randomizedQuestions,
+            id: crypto.randomUUID(),
+            createdAt: Date.now()
+        };
+    }
+
+    const handleManualImport = () => {
+        if (!pasteText.trim()) return;
+        try {
+            const jsonMatch = pasteText.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) throw new Error("JSON形式のデータが見つかりませんでした。");
+
+            const data = JSON.parse(jsonMatch[0]);
+            const newQuiz = processQuizData(data);
+
+            const updated = [newQuiz, ...quizzes];
+            setQuizzes(updated);
+            localStorage.setItem('ai_quizzes', JSON.stringify(updated));
+            setPasteText('');
+            setIsPasting(false);
+            alert('クイズをインポートしました！');
+        } catch (err) {
+            alert('インポートに失敗しました。AIの回答からJSONを正しく抽出できませんでした。');
         }
     }
 
@@ -260,7 +295,10 @@ ${topicsStr}
                                 </div>
 
                                 <div className="prompt-panel">
-                                    <label>生成プロンプト（編集可能）</label>
+                                    <div className="prompt-header">
+                                        <label>生成プロンプト（編集可能）</label>
+                                        <button className="copy-btn-small" onClick={handleCopyPrompt}>プロンプトをコピー</button>
+                                    </div>
                                     <textarea
                                         value={customPrompt}
                                         onChange={(e) => setCustomPrompt(e.target.value)}
@@ -271,8 +309,9 @@ ${topicsStr}
                                         onClick={handleCreate}
                                         disabled={isGenerating}
                                     >
-                                        {isGenerating ? 'AIが生成中...' : 'このプロンプトで生成する'}
+                                        {isGenerating ? 'AIが生成中...' : 'Gemini APIで生成する'}
                                     </button>
+                                    <p className="hint-small">※APIキーがない場合は、プロンプトをコピーして外部AIに貼り付けてください。</p>
                                 </div>
                             </div>
                         </section>
@@ -280,13 +319,30 @@ ${topicsStr}
                         <section className="list-section">
                             <div className="list-header">
                                 <h2>作成済みの問題</h2>
-                                <div className="import-box">
+                                <div className="import-controls">
+                                    <button className="btn-secondary" onClick={() => setIsPasting(!isPasting)}>
+                                        {isPasting ? '閉じる' : 'テキストから取り込む'}
+                                    </button>
                                     <label className="btn-secondary">
-                                        JSONインポート
+                                        JSONファイル読込
                                         <input type="file" accept=".json" onChange={importQuiz} hidden />
                                     </label>
                                 </div>
                             </div>
+
+                            {isPasting && (
+                                <div className="paste-import-box">
+                                    <textarea
+                                        value={pasteText}
+                                        onChange={(e) => setPasteText(e.target.value)}
+                                        placeholder="AIからの回答（JSONを含むテキスト）をここに貼り付けてください..."
+                                    />
+                                    <div className="paste-actions">
+                                        <button className="generate-btn" onClick={handleManualImport}>取り込む</button>
+                                    </div>
+                                </div>
+                            )}
+
                             {quizzes.length === 0 ? (
                                 <p>まだ問題がありません。上のパネルから作成してみましょう。</p>
                             ) : (

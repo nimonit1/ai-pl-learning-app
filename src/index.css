@@ -91,6 +91,79 @@ main {
 }
 
 /* Generator Section */
+.prompt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.copy-btn-small {
+    background: rgba(88, 166, 255, 0.1);
+    border: 1px solid var(--accent-secondary);
+    color: var(--accent-secondary);
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.copy-btn-small:hover {
+    background: var(--accent-secondary);
+    color: white;
+}
+
+.hint-small {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+    text-align: center;
+}
+
+.import-controls {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.paste-import-box {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 2rem;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.paste-import-box textarea {
+    width: 100%;
+    height: 120px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: var(--text-primary);
+    padding: 0.8rem;
+    margin-bottom: 1rem;
+    resize: vertical;
+}
+
+.paste-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
 .generator-container {
     display: grid;
     grid-template-columns: 1fr 1.2fr;
