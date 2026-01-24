@@ -1,10 +1,11 @@
-const CACHE_NAME = 'quiz-master-cache-v1';
+const CACHE_NAME = 'quiz-master-cache-v3';
 const urlsToCache = [
     '/',
     '/index.html',
-    '/src/main.tsx',
-    '/src/App.tsx',
-    '/src/index.css'
+    '/apps/programming/index.html',
+    '/src/portal/main.tsx',
+    '/src/apps/programming/main.tsx',
+    '/src/shared/styles/base.css'
 ];
 
 self.addEventListener('install', (event: any) => {

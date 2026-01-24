@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { generateQuizFromPrompt } from './lib/gemini'
+import { generateQuizFromPrompt } from '../../shared/lib/gemini'
+import { processQuizData, shuffleQuestion } from '../../shared/lib/quizUtils'
+import { DEFAULT_PROGRAMMING_QUIZZES } from './defaultQuizzes'
 
+/**
+ * クイズ情報の型定義
+ */
 interface Quiz {
     id: string;
     title: string;
@@ -8,8 +13,12 @@ interface Quiz {
     difficulty: string;
     questions: Question[];
     createdAt: number;
+    isDefault?: boolean; // デフォルト問題かどうか
 }
 
+/**
+ * 各問題の型定義
+ */
 interface Question {
     question: string;
     options: string[];
@@ -17,20 +26,26 @@ interface Question {
     explanation: string;
 }
 
+/**
+ * プログラミングジャンル固有のトピック設定
+ */
 const TOPICS = {
     C: ['ポインタ', 'メモリ管理', '構造体', '標準ライブラリ', '制御構文', '配列・文字列'],
     python: ['リスト内包表記', 'デコレータ', 'クラス・継承', '例外処理', '標準ライブラリ', 'データ型・辞書'],
     VBA: ['セル操作(Range/Cells)', 'ループ処理', 'ユーザーフォーム', 'イベント', '変数の型・スコープ', 'エラーハンドリング']
 }
 
+/**
+ * プログラミング学習クイズアプリ - メインコンポーネント
+ */
 function App() {
+    // --- 状態管理 (State) ---
     const [quizzes, setQuizzes] = useState<Quiz[]>([])
     const [view, setView] = useState<'dashboard' | 'create' | 'play' | 'settings'>('dashboard')
     const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_api_key') || '')
     const [selectedModel, setSelectedModel] = useState(localStorage.getItem('gemini_model') || 'gemini-1.5-flash')
 
-
-    // 生成・プレイ用状態
+    // 生成・プレイ用の状態
     const [selectedLang, setSelectedLang] = useState<'C' | 'python' | 'VBA'>('python')
     const [difficulty, setDifficulty] = useState('中級')
     const [selectedTopics, setSelectedTopics] = useState<string[]>([])
@@ -44,13 +59,25 @@ function App() {
     const [pasteText, setPasteText] = useState('')
     const [isPasting, setIsPasting] = useState(false)
 
+    // --- 副作用 (Effects) ---
 
+    // 初回に保存済みクイズとデフォルトクイズを読み込む
     useEffect(() => {
         const saved = localStorage.getItem('ai_quizzes')
-        if (saved) setQuizzes(JSON.parse(saved))
+        const userQuizzes = saved ? JSON.parse(saved) : []
+
+        // デフォルトクイズにIDを付与（未付与の場合）
+        const defaults = DEFAULT_PROGRAMMING_QUIZZES.map((q, i) => ({
+            ...q,
+            id: `default-${i}`,
+            createdAt: 0,
+            isDefault: true
+        })) as Quiz[];
+
+        setQuizzes([...userQuizzes, ...defaults])
     }, [])
 
-    // プロンプトの自動生成ロジック
+    // 選択状態が変わるたびにプロンプトを自動更新
     useEffect(() => {
         const topicsStr = selectedTopics.length > 0 ? `テーマは「${selectedTopics.join(', ')}」に関連させてください。` : ""
         const titleTopics = selectedTopics.length > 0 ? ` - ${selectedTopics.join('/')}` : ""
@@ -78,11 +105,15 @@ ${topicsStr}
         setCustomPrompt(prompt)
     }, [selectedLang, difficulty, selectedTopics])
 
+    // --- ハンドラー (Handlers) ---
+
+    // APIキーの保存
     const saveApiKey = (key: string) => {
         setApiKey(key)
         localStorage.setItem('gemini_api_key', key)
     }
 
+    // APIキーの消去
     const deleteApiKey = () => {
         if (window.confirm('保存されているAPIキーを消去してもよろしいですか？')) {
             setApiKey('')
@@ -90,12 +121,14 @@ ${topicsStr}
         }
     }
 
+    // トピックの選択切り替え
     const handleTopicToggle = (topic: string) => {
         setSelectedTopics(prev =>
             prev.includes(topic) ? prev.filter(t => t !== topic) : [...prev, topic]
         )
     }
 
+    // クイズの自動生成（API実行）
     const handleCreate = async () => {
         if (!apiKey) {
             alert('先に設定画面でAPIキーを入力してください。')
@@ -107,9 +140,15 @@ ${topicsStr}
             const data = await generateQuizFromPrompt(apiKey, customPrompt, selectedModel)
             const newQuiz = processQuizData(data)
 
-            const updated = [newQuiz, ...quizzes]
-            setQuizzes(updated)
-            localStorage.setItem('ai_quizzes', JSON.stringify(updated))
+            const userSaved = localStorage.getItem('ai_quizzes')
+            const userQuizzes = userSaved ? JSON.parse(userSaved) : []
+            const updatedUser = [newQuiz, ...userQuizzes]
+            localStorage.setItem('ai_quizzes', JSON.stringify(updatedUser))
+
+            // 全表示リストを更新
+            const defaults = DEFAULT_PROGRAMMING_QUIZZES.map((q, i) => ({ ...q, id: `default-${i}`, isDefault: true }))
+            setQuizzes([...updatedUser, ...defaults] as any)
+
             setCurrentQuiz(newQuiz)
             setView('play')
             resetQuiz()
@@ -122,6 +161,7 @@ ${topicsStr}
         }
     }
 
+    // プロンプトのコピー
     const handleCopyPrompt = () => {
         navigator.clipboard.writeText(customPrompt).then(() => {
             alert('プロンプトをクリップボードにコピーしました！')
@@ -130,41 +170,24 @@ ${topicsStr}
         })
     }
 
-    const processQuizData = (data: any) => {
-        // 選択肢と正解インデックスをランダムにシャッフルする共通ロジック
-        const randomizedQuestions = data.questions.map((q: any) => {
-            const optionsWithIndex = q.options.map((opt: string, i: number) => ({ opt, isCorrect: i === q.answerIndex }));
-            for (let i = optionsWithIndex.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [optionsWithIndex[i], optionsWithIndex[j]] = [optionsWithIndex[j], optionsWithIndex[i]];
-            }
-            return {
-                ...q,
-                options: optionsWithIndex.map((o: any) => o.opt),
-                answerIndex: optionsWithIndex.findIndex((o: any) => o.isCorrect)
-            };
-        });
-
-        return {
-            ...data,
-            questions: randomizedQuestions,
-            id: crypto.randomUUID(),
-            createdAt: Date.now()
-        };
-    }
-
+    // 手動インポート処理
     const handleManualImport = () => {
         if (!pasteText.trim()) return;
         try {
             const jsonMatch = pasteText.match(/\{[\s\S]*\}/);
-            if (!jsonMatch) throw new Error("JSON形式のデータが見つかりませんでした。");
+            if (!jsonMatch) throw new Error("JSONが見つかりません");
 
             const data = JSON.parse(jsonMatch[0]);
             const newQuiz = processQuizData(data);
 
-            const updated = [newQuiz, ...quizzes];
-            setQuizzes(updated);
-            localStorage.setItem('ai_quizzes', JSON.stringify(updated));
+            const userSaved = localStorage.getItem('ai_quizzes')
+            const userQuizzes = userSaved ? JSON.parse(userSaved) : []
+            const updatedUser = [newQuiz, ...userQuizzes]
+            localStorage.setItem('ai_quizzes', JSON.stringify(updatedUser))
+
+            const defaults = DEFAULT_PROGRAMMING_QUIZZES.map((q, i) => ({ ...q, id: `default-${i}`, isDefault: true }))
+            setQuizzes([...updatedUser, ...defaults] as any)
+
             setPasteText('');
             setIsPasting(false);
             alert('クイズをインポートしました！');
@@ -173,6 +196,7 @@ ${topicsStr}
         }
     }
 
+    // クイズプレイ情報の初期化
     const resetQuiz = () => {
         setCurrentQuestionIndex(0)
         setScore(0)
@@ -180,6 +204,7 @@ ${topicsStr}
         setUserAnswer(null)
     }
 
+    // 解答選択時の処理
     const handleAnswer = (index: number) => {
         if (userAnswer !== null) return
         setUserAnswer(index)
@@ -188,6 +213,7 @@ ${topicsStr}
         }
     }
 
+    // 次の問題へ進む
     const nextQuestion = () => {
         if (!currentQuiz) return
         if (currentQuestionIndex < currentQuiz.questions.length - 1) {
@@ -198,13 +224,24 @@ ${topicsStr}
         }
     }
 
+    // クイズの削除
     const deleteQuiz = (id: string) => {
+        if (id.startsWith('default-')) {
+            alert('デフォルト問題は削除できません。')
+            return
+        }
         if (!window.confirm('この問題を削除しますか？')) return
-        const updated = quizzes.filter(q => q.id !== id)
-        setQuizzes(updated)
-        localStorage.setItem('ai_quizzes', JSON.stringify(updated))
+
+        const userSaved = localStorage.getItem('ai_quizzes')
+        const userQuizzes = userSaved ? JSON.parse(userSaved) : []
+        const updatedUser = userQuizzes.filter((q: any) => q.id !== id)
+        localStorage.setItem('ai_quizzes', JSON.stringify(updatedUser))
+
+        const defaults = DEFAULT_PROGRAMMING_QUIZZES.map((q, i) => ({ ...q, id: `default-${i}`, isDefault: true }))
+        setQuizzes([...updatedUser, ...defaults] as any)
     }
 
+    // クイズのエクスポート
     const exportQuiz = (quiz: Quiz) => {
         const blob = new Blob([JSON.stringify(quiz, null, 2)], { type: 'application/json' })
         const url = URL.createObjectURL(blob)
@@ -214,6 +251,7 @@ ${topicsStr}
         a.click()
     }
 
+    // JSONファイルの取り込み
     const importQuiz = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (!file) return
@@ -221,9 +259,15 @@ ${topicsStr}
         reader.onload = (event) => {
             try {
                 const quiz = JSON.parse(event.target?.result as string)
-                const updated = [{ ...quiz, id: crypto.randomUUID() }, ...quizzes]
-                setQuizzes(updated)
-                localStorage.setItem('ai_quizzes', JSON.stringify(updated))
+                const newEntry = { ...quiz, id: crypto.randomUUID() }
+
+                const userSaved = localStorage.getItem('ai_quizzes')
+                const userQuizzes = userSaved ? JSON.parse(userSaved) : []
+                const updatedUser = [newEntry, ...userQuizzes]
+                localStorage.setItem('ai_quizzes', JSON.stringify(updatedUser))
+
+                const defaults = DEFAULT_PROGRAMMING_QUIZZES.map((q, i) => ({ ...q, id: `default-${i}`, isDefault: true }))
+                setQuizzes([...updatedUser, ...defaults] as any)
             } catch {
                 alert('JSONの読み込みに失敗しました。')
             }
@@ -231,19 +275,23 @@ ${topicsStr}
         reader.readAsText(file)
     }
 
+    // --- レンダリング (UI) ---
     return (
         <div className="container">
             <header>
-                <h1 onClick={() => setView('dashboard')} style={{ cursor: 'pointer' }}>AI Quiz Master</h1>
+                <h1 onClick={() => setView('dashboard')} style={{ cursor: 'pointer' }}>AI Quiz Master (Programming)</h1>
                 <nav>
                     <button onClick={() => setView('dashboard')} className={view === 'dashboard' ? 'active' : ''}>ホーム</button>
                     <button onClick={() => setView('settings')} className={view === 'settings' ? 'active' : ''}>設定</button>
+                    <button onClick={() => window.location.href = '/'} className="btn-portal">ジャンル選択へ</button>
                 </nav>
             </header>
 
             <main>
+                {/* ダッシュボード画面 */}
                 {view === 'dashboard' && (
                     <div className="dashboard-grid">
+                        {/* 生成パネル */}
                         <section className="create-section">
                             <h2>新しく問題を生成する</h2>
                             <div className="generator-container">
@@ -316,6 +364,7 @@ ${topicsStr}
                             </div>
                         </section>
 
+                        {/* リストパネル */}
                         <section className="list-section">
                             <div className="list-header">
                                 <h2>作成済みの問題</h2>
@@ -330,6 +379,7 @@ ${topicsStr}
                                 </div>
                             </div>
 
+                            {/* テキスト貼り付けインポートエリア */}
                             {isPasting && (
                                 <div className="paste-import-box">
                                     <textarea
@@ -348,31 +398,19 @@ ${topicsStr}
                             ) : (
                                 <div className="quiz-list">
                                     {quizzes.map(quiz => (
-                                        <div key={quiz.id} className="quiz-card">
+                                        <div key={quiz.id} className={`quiz-card ${quiz.isDefault ? 'is-default' : ''}`}>
                                             <div className="card-header">
-                                                <h3>{quiz.title}</h3>
+                                                <h3>{quiz.title} {quiz.isDefault && <small>(公式)</small>}</h3>
                                                 <div className="card-controls">
                                                     <button onClick={() => exportQuiz(quiz)} title="エクスポート">↓</button>
-                                                    <button onClick={() => deleteQuiz(quiz.id)} className="delete" title="削除">×</button>
+                                                    {!quiz.isDefault && <button onClick={() => deleteQuiz(quiz.id)} className="delete" title="削除">×</button>}
                                                 </div>
                                             </div>
                                             <p>{quiz.language} | {quiz.difficulty}</p>
                                             <button className="play-btn" onClick={() => {
                                                 const shuffledQuiz = {
                                                     ...quiz,
-                                                    questions: quiz.questions.map(q => {
-                                                        const optionsWithIndex = q.options.map((opt, i) => ({ opt, isCorrect: i === q.answerIndex }));
-                                                        const shuffled = [...optionsWithIndex];
-                                                        for (let i = shuffled.length - 1; i > 0; i--) {
-                                                            const j = Math.floor(Math.random() * (i + 1));
-                                                            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-                                                        }
-                                                        return {
-                                                            ...q,
-                                                            options: shuffled.map(o => o.opt),
-                                                            answerIndex: shuffled.findIndex(o => o.isCorrect)
-                                                        };
-                                                    })
+                                                    questions: quiz.questions.map(q => shuffleQuestion(q))
                                                 };
                                                 setCurrentQuiz(shuffledQuiz);
                                                 setView('play');
@@ -386,6 +424,7 @@ ${topicsStr}
                     </div>
                 )}
 
+                {/* プレイ画面 */}
                 {view === 'play' && currentQuiz && (
                     <div className="play-page">
                         {!showResult ? (
@@ -441,6 +480,7 @@ ${topicsStr}
                     </div>
                 )}
 
+                {/* 設定画面 */}
                 {view === 'settings' && (
                     <div className="settings-page">
                         <h2>設定</h2>
@@ -481,7 +521,7 @@ ${topicsStr}
                                 <option value="gemini-2.5-flash">Gemini 2.5 Flash (最新・高速)</option>
                                 <option value="gemini-2.5-pro">Gemini 2.5 Pro (最新・最高性能)</option>
                             </select>
-                            <p className="hint">※2026年現在の最新モデル（2.5系）も無料枠で利用可能です。エラーが出る場合は「latest」が付いたモデルをお試しください。</p>
+                            <p className="hint">※2026年現在の最新モデル（2.5系）も無料枠で利用可能です。</p>
                         </div>
                         <button className="save-back-btn" onClick={() => setView('dashboard')}>戻る</button>
                     </div>
