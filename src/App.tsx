@@ -125,7 +125,7 @@ ${topicsStr}
     const handleCopyPrompt = () => {
         navigator.clipboard.writeText(customPrompt).then(() => {
             alert('プロンプトをクリップボードにコピーしました！')
-        }).catch(err => {
+        }).catch(() => {
             alert('コピーに失敗しました。')
         })
     }
@@ -168,7 +168,7 @@ ${topicsStr}
             setPasteText('');
             setIsPasting(false);
             alert('クイズをインポートしました！');
-        } catch (err) {
+        } catch {
             alert('インポートに失敗しました。AIの回答からJSONを正しく抽出できませんでした。');
         }
     }
@@ -224,7 +224,7 @@ ${topicsStr}
                 const updated = [{ ...quiz, id: crypto.randomUUID() }, ...quizzes]
                 setQuizzes(updated)
                 localStorage.setItem('ai_quizzes', JSON.stringify(updated))
-            } catch (err) {
+            } catch {
                 alert('JSONの読み込みに失敗しました。')
             }
         }
