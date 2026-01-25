@@ -11,6 +11,14 @@ const GENRES = [
         color: 'var(--accent-blue)'
     },
     {
+        id: 'custom',
+        title: 'Custom Realm',
+        description: 'Create quizzes for any topic you imagine.',
+        icon: '✨',
+        path: 'apps/custom/index.html',
+        color: 'var(--accent-purple)'
+    },
+    {
         id: 'history',
         title: 'History',
         description: 'Journey through time and civilizations.',

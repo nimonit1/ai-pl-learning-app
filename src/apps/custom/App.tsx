@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { generateQuizFromPrompt } from '../../shared/lib/gemini'
 import { processQuizData, shuffleQuestion } from '../../shared/lib/quizUtils'
-import { DEFAULT_PROGRAMMING_QUIZZES } from './defaultQuizzes'
 
 /**
  * クイズ情報の型定義
@@ -9,11 +8,10 @@ import { DEFAULT_PROGRAMMING_QUIZZES } from './defaultQuizzes'
 interface Quiz {
     id: string;
     title: string;
-    language: 'C' | 'python' | 'VBA';
+    genre: string; // ジャンルを追加
     difficulty: string;
     questions: Question[];
     createdAt: number;
-    isDefault?: boolean; // デフォルト問題かどうか
 }
 
 /**
@@ -45,7 +43,7 @@ interface ScoreHistory {
 /**
  * 履歴管理のヘルパー関数
  */
-const HISTORY_STORAGE_KEY = 'quiz_score_history';
+const HISTORY_STORAGE_KEY = 'quiz_score_history_custom'; // カスタム用のキーに変更
 
 // 全履歴を取得
 const getAllHistory = (): Record<string, ScoreHistory> => {
@@ -126,15 +124,6 @@ const deleteQuizHistory = (quizId: string) => {
 };
 
 /**
- * プログラミングジャンル固有のトピック設定
- */
-const TOPICS = {
-    C: ['ポインタ', 'メモリ管理', '構造体', '標準ライブラリ', '制御構文', '配列・文字列'],
-    python: ['リスト内包表記', 'デコレータ', 'クラス・継承', '例外処理', '標準ライブラリ', 'データ型・辞書'],
-    VBA: ['セル操作(Range/Cells)', 'ループ処理', 'ユーザーフォーム', 'イベント', '変数の型・スコープ', 'エラーハンドリング']
-}
-
-/**
  * 得点推移グラフコンポーネント
  */
 interface ScoreChartProps {
@@ -176,7 +165,7 @@ const ScoreChart: React.FC<ScoreChartProps> = ({ history }) => {
             ctx.stroke();
         }
 
-        // Y軸ラベル (0%, 25%, 50%, 75%, 100%)
+        // Y軸ラベル
         ctx.fillStyle = '#a0a0a0';
         ctx.font = '12px Inter, sans-serif';
         ctx.textAlign = 'right';
@@ -250,7 +239,7 @@ const ScoreChart: React.FC<ScoreChartProps> = ({ history }) => {
 };
 
 /**
- * プログラミング学習クイズアプリ - メインコンポーネント
+ * カスタムクイズ生成アプリ - メインコンポーネント
  */
 function App() {
     // --- 状態管理 (State) ---
@@ -260,10 +249,10 @@ function App() {
     const [selectedModel, setSelectedModel] = useState(localStorage.getItem('gemini_model') || 'gemini-1.5-flash')
 
     // 生成・プレイ用の状態
-    const [selectedLang, setSelectedLang] = useState<'C' | 'python' | 'VBA'>('python')
+    const [customGenre, setCustomGenre] = useState('')
+    const [customDetails, setCustomDetails] = useState('')
     const [difficulty, setDifficulty] = useState('中級')
-    const [selectedTopics, setSelectedTopics] = useState<string[]>([])
-    const [customPrompt, setCustomPrompt] = useState('')
+    const [generatedPrompt, setGeneratedPrompt] = useState('')
     const [isGenerating, setIsGenerating] = useState(false)
     const [currentQuiz, setCurrentQuiz] = useState<Quiz | null>(null)
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
@@ -276,36 +265,39 @@ function App() {
 
     // --- 副作用 (Effects) ---
 
-    // 初回に保存済みクイズとデフォルトクイズを読み込む
+    // 初回に保存済みクイズを読み込む
     useEffect(() => {
-        const saved = localStorage.getItem('ai_quizzes')
+        const saved = localStorage.getItem('ai_quizzes_custom')
         const userQuizzes = saved ? JSON.parse(saved) : []
-
-        // デフォルトクイズにIDを付与（未付与の場合）
-        const defaults = DEFAULT_PROGRAMMING_QUIZZES.map((q, i) => ({
-            ...q,
-            id: `default-${i}`,
-            createdAt: 0,
-            isDefault: true
-        })) as Quiz[];
-
-        setQuizzes([...userQuizzes, ...defaults])
+        setQuizzes(userQuizzes)
     }, [])
 
-    // 選択状態が変わるたびにプロンプトを自動更新
+    // 入力内容が変わるたびにプロンプトを自動更新
     useEffect(() => {
-        const topicsStr = selectedTopics.length > 0 ? `テーマは「${selectedTopics.join(', ')}」に関連させてください。` : ""
-        const titleTopics = selectedTopics.length > 0 ? ` - ${selectedTopics.join('/')}` : ""
+        if (!customGenre) {
+            setGeneratedPrompt('（ジャンルを入力するとここにプロンプトが生成されます）')
+            return
+        }
+
         const prompt = `
-プログラミング言語「${selectedLang}」の学習用クイズを、難易度「${difficulty}」で5問作成してください。
-${topicsStr}
+以下の条件で学習用の4択クイズを5問作成してください。
+
+【テーマ・ジャンル】
+${customGenre}
+
+【詳細条件・重点項目】
+${customDetails || '特になし（一般的な内容で作成してください）'}
+
+【難易度】
+${difficulty}
+
 ※正解の選択肢の位置（answerIndex）が特定の番号に偏らないよう、問題ごとにランダムに変更してください。
 
 回答形式は以下のJSONフォーマットのみを返してください。解説等は不要です。
 
 {
-  "title": "${selectedLang}クイズ (${difficulty}${titleTopics})",
-  "language": "${selectedLang}",
+  "title": "${customGenre}クイズ (${difficulty})",
+  "genre": "${customGenre}",
   "difficulty": "${difficulty}",
   "questions": [
     {
@@ -317,8 +309,8 @@ ${topicsStr}
   ]
 }
 `.trim()
-        setCustomPrompt(prompt)
-    }, [selectedLang, difficulty, selectedTopics])
+        setGeneratedPrompt(prompt)
+    }, [customGenre, customDetails, difficulty])
 
     // --- ハンドラー (Handlers) ---
 
@@ -336,13 +328,6 @@ ${topicsStr}
         }
     }
 
-    // トピックの選択切り替え
-    const handleTopicToggle = (topic: string) => {
-        setSelectedTopics(prev =>
-            prev.includes(topic) ? prev.filter(t => t !== topic) : [...prev, topic]
-        )
-    }
-
     // クイズの自動生成（API実行）
     const handleCreate = async () => {
         if (!apiKey) {
@@ -350,19 +335,25 @@ ${topicsStr}
             setView('settings')
             return
         }
+        if (!customGenre) {
+            alert('ジャンルを入力してください。')
+            return
+        }
+
         setIsGenerating(true)
         try {
-            const data = await generateQuizFromPrompt(apiKey, customPrompt, selectedModel)
+            const data = await generateQuizFromPrompt(apiKey, generatedPrompt, selectedModel)
             const newQuiz = processQuizData(data)
 
-            const userSaved = localStorage.getItem('ai_quizzes')
+            // ジャンル情報を補完（AIが返さない場合があるため）
+            if (!newQuiz.genre) newQuiz.genre = customGenre;
+
+            const userSaved = localStorage.getItem('ai_quizzes_custom')
             const userQuizzes = userSaved ? JSON.parse(userSaved) : []
             const updatedUser = [newQuiz, ...userQuizzes]
-            localStorage.setItem('ai_quizzes', JSON.stringify(updatedUser))
+            localStorage.setItem('ai_quizzes_custom', JSON.stringify(updatedUser))
 
-            // 全表示リストを更新
-            const defaults = DEFAULT_PROGRAMMING_QUIZZES.map((q, i) => ({ ...q, id: `default-${i}`, isDefault: true }))
-            setQuizzes([...updatedUser, ...defaults] as any)
+            setQuizzes(updatedUser)
 
             setCurrentQuiz(newQuiz)
             setView('play')
@@ -378,7 +369,7 @@ ${topicsStr}
 
     // プロンプトのコピー
     const handleCopyPrompt = () => {
-        navigator.clipboard.writeText(customPrompt).then(() => {
+        navigator.clipboard.writeText(generatedPrompt).then(() => {
             alert('プロンプトをクリップボードにコピーしました！')
         }).catch(() => {
             alert('コピーに失敗しました。')
@@ -395,13 +386,15 @@ ${topicsStr}
             const data = JSON.parse(jsonMatch[0]);
             const newQuiz = processQuizData(data);
 
-            const userSaved = localStorage.getItem('ai_quizzes')
+            // ジャンルがなければ「Imported」とする
+            if (!newQuiz.genre) newQuiz.genre = 'Imported';
+
+            const userSaved = localStorage.getItem('ai_quizzes_custom')
             const userQuizzes = userSaved ? JSON.parse(userSaved) : []
             const updatedUser = [newQuiz, ...userQuizzes]
-            localStorage.setItem('ai_quizzes', JSON.stringify(updatedUser))
+            localStorage.setItem('ai_quizzes_custom', JSON.stringify(updatedUser))
 
-            const defaults = DEFAULT_PROGRAMMING_QUIZZES.map((q, i) => ({ ...q, id: `default-${i}`, isDefault: true }))
-            setQuizzes([...updatedUser, ...defaults] as any)
+            setQuizzes(updatedUser)
 
             setPasteText('');
             setIsPasting(false);
@@ -443,22 +436,17 @@ ${topicsStr}
 
     // クイズの削除
     const deleteQuiz = (id: string) => {
-        if (id.startsWith('default-')) {
-            alert('デフォルト問題は削除できません。')
-            return
-        }
         if (!window.confirm('この問題を削除しますか？')) return
 
         // 履歴も一緒に削除
         deleteQuizHistory(id)
 
-        const userSaved = localStorage.getItem('ai_quizzes')
+        const userSaved = localStorage.getItem('ai_quizzes_custom')
         const userQuizzes = userSaved ? JSON.parse(userSaved) : []
         const updatedUser = userQuizzes.filter((q: any) => q.id !== id)
-        localStorage.setItem('ai_quizzes', JSON.stringify(updatedUser))
+        localStorage.setItem('ai_quizzes_custom', JSON.stringify(updatedUser))
 
-        const defaults = DEFAULT_PROGRAMMING_QUIZZES.map((q, i) => ({ ...q, id: `default-${i}`, isDefault: true }))
-        setQuizzes([...updatedUser, ...defaults] as any)
+        setQuizzes(updatedUser)
     }
 
     // 履歴リセット（個別）
@@ -515,13 +503,15 @@ ${topicsStr}
                 const quiz = JSON.parse(event.target?.result as string)
                 const newEntry = { ...quiz, id: crypto.randomUUID() }
 
-                const userSaved = localStorage.getItem('ai_quizzes')
+                // ジャンルがなければ「Imported」とする
+                if (!newEntry.genre) newEntry.genre = 'Imported';
+
+                const userSaved = localStorage.getItem('ai_quizzes_custom')
                 const userQuizzes = userSaved ? JSON.parse(userSaved) : []
                 const updatedUser = [newEntry, ...userQuizzes]
-                localStorage.setItem('ai_quizzes', JSON.stringify(updatedUser))
+                localStorage.setItem('ai_quizzes_custom', JSON.stringify(updatedUser))
 
-                const defaults = DEFAULT_PROGRAMMING_QUIZZES.map((q, i) => ({ ...q, id: `default-${i}`, isDefault: true }))
-                setQuizzes([...updatedUser, ...defaults] as any)
+                setQuizzes(updatedUser)
             } catch {
                 alert('JSONの読み込みに失敗しました。')
             }
@@ -533,7 +523,7 @@ ${topicsStr}
     return (
         <div className="container">
             <header>
-                <h1 onClick={() => setView('dashboard')} style={{ cursor: 'pointer' }}>AI Quiz Master (Programming)</h1>
+                <h1 onClick={() => setView('dashboard')} style={{ cursor: 'pointer' }}>AI Quiz Generator (Custom)</h1>
                 <nav>
                     <button onClick={() => setView('dashboard')} className={view === 'dashboard' ? 'active' : ''}>ホーム</button>
                     <button onClick={() => setView('settings')} className={view === 'settings' ? 'active' : ''}>設定</button>
@@ -547,22 +537,48 @@ ${topicsStr}
                     <div className="dashboard-grid">
                         {/* 生成パネル */}
                         <section className="create-section">
-                            <h2>新しく問題を生成する</h2>
+                            <h2>オリジナル問題を作る</h2>
                             <div className="generator-container">
                                 <div className="setup-panel">
                                     <div className="setup-group">
-                                        <label>言語</label>
-                                        <div className="selector-row">
-                                            {(['C', 'python', 'VBA'] as const).map(lang => (
-                                                <button
-                                                    key={lang}
-                                                    className={selectedLang === lang ? 'active' : ''}
-                                                    onClick={() => { setSelectedLang(lang); setSelectedTopics([]); }}
-                                                >
-                                                    {lang}
-                                                </button>
-                                            ))}
-                                        </div>
+                                        <label>学習したいジャンル・テーマ</label>
+                                        <input
+                                            type="text"
+                                            value={customGenre}
+                                            onChange={(e) => setCustomGenre(e.target.value)}
+                                            placeholder="例：日本史、Python、料理、マーベル映画..."
+                                            className="input-large"
+                                            style={{
+                                                width: '100%',
+                                                padding: '1rem',
+                                                fontSize: '1.2rem',
+                                                borderRadius: '12px',
+                                                border: '1px solid var(--glass-border)',
+                                                background: 'rgba(0,0,0,0.3)',
+                                                color: 'white',
+                                                marginBottom: '1rem'
+                                            }}
+                                        />
+                                    </div>
+
+                                    <div className="setup-group">
+                                        <label>詳細条件・重点項目（任意）</label>
+                                        <textarea
+                                            value={customDetails}
+                                            onChange={(e) => setCustomDetails(e.target.value)}
+                                            placeholder="例：戦国時代を中心に。家康の政策について詳しく。"
+                                            style={{
+                                                width: '100%',
+                                                height: '100px',
+                                                padding: '1rem',
+                                                borderRadius: '12px',
+                                                border: '1px solid var(--glass-border)',
+                                                background: 'rgba(0,0,0,0.3)',
+                                                color: 'white',
+                                                fontFamily: 'inherit',
+                                                marginBottom: '1rem'
+                                            }}
+                                        />
                                     </div>
 
                                     <div className="setup-group">
@@ -579,39 +595,25 @@ ${topicsStr}
                                             ))}
                                         </div>
                                     </div>
-
-                                    <div className="setup-group">
-                                        <label>項目（複数選択可）</label>
-                                        <div className="topics-grid">
-                                            {TOPICS[selectedLang].map(topic => (
-                                                <button
-                                                    key={topic}
-                                                    className={`topic-chip ${selectedTopics.includes(topic) ? 'selected' : ''}`}
-                                                    onClick={() => handleTopicToggle(topic)}
-                                                >
-                                                    {topic}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
                                 </div>
 
                                 <div className="prompt-panel">
                                     <div className="prompt-header">
-                                        <label>生成プロンプト（編集可能）</label>
+                                        <label>生成プロンプト（自動生成）</label>
                                         <button className="copy-btn-small" onClick={handleCopyPrompt}>プロンプトをコピー</button>
                                     </div>
                                     <textarea
-                                        value={customPrompt}
-                                        onChange={(e) => setCustomPrompt(e.target.value)}
-                                        placeholder="プロンプトがここに生成されます..."
+                                        value={generatedPrompt}
+                                        onChange={(e) => setGeneratedPrompt(e.target.value)}
+                                        placeholder="設定を入力するとプロンプトが生成されます..."
+                                        style={{ height: '150px' }}
                                     />
                                     <button
                                         className="generate-btn"
                                         onClick={handleCreate}
                                         disabled={isGenerating}
                                     >
-                                        {isGenerating ? 'AIが生成中...' : 'Gemini APIで生成する'}
+                                        {isGenerating ? 'AIが生成中...' : '生成する (Gemini API)'}
                                     </button>
                                     <p className="hint-small">※APIキーがない場合は、プロンプトをコピーして外部AIに貼り付けてください。</p>
                                 </div>
@@ -624,10 +626,10 @@ ${topicsStr}
                                 <h2>作成済みの問題</h2>
                                 <div className="import-controls">
                                     <button className="btn-secondary" onClick={() => setIsPasting(!isPasting)}>
-                                        {isPasting ? '閉じる' : 'テキストから取り込む'}
+                                        {isPasting ? '閉じる' : 'テキスト取込'}
                                     </button>
                                     <label className="btn-secondary">
-                                        JSONファイル読込
+                                        JSON読込
                                         <input type="file" accept=".json" onChange={importQuiz} hidden />
                                     </label>
                                     <button className="btn-secondary btn-danger" onClick={handleResetAllHistory} title="全履歴リセット">
@@ -651,13 +653,13 @@ ${topicsStr}
                             )}
 
                             {quizzes.length === 0 ? (
-                                <p>まだ問題がありません。上のパネルから作成してみましょう。</p>
+                                <p>まだ問題がありません。左のパネルから好きなジャンルで作成してみましょう。</p>
                             ) : (
                                 <div className="quiz-list">
                                     {quizzes.map(quiz => (
                                         <div
                                             key={quiz.id}
-                                            className={`quiz-card ${quiz.isDefault ? 'is-default' : ''}`}
+                                            className="quiz-card"
                                             onClick={() => {
                                                 const shuffledQuiz = {
                                                     ...quiz,
@@ -669,14 +671,14 @@ ${topicsStr}
                                             }}
                                         >
                                             <div className="card-header">
-                                                <h3>{quiz.title} {quiz.isDefault && <small>(公式)</small>}</h3>
+                                                <h3>{quiz.title}</h3>
                                                 <div className="card-controls">
                                                     <button onClick={(e) => { e.stopPropagation(); exportQuiz(quiz); }} title="エクスポート">↓</button>
                                                     <button onClick={(e) => { e.stopPropagation(); handleResetQuizHistory(quiz.id); }} title="履歴リセット">↻</button>
-                                                    {!quiz.isDefault && <button onClick={(e) => { e.stopPropagation(); deleteQuiz(quiz.id); }} className="delete" title="削除">×</button>}
+                                                    <button onClick={(e) => { e.stopPropagation(); deleteQuiz(quiz.id); }} className="delete" title="削除">×</button>
                                                 </div>
                                             </div>
-                                            <p>{quiz.language} | {quiz.difficulty}</p>
+                                            <p>{quiz.genre} | {quiz.difficulty}</p>
 
                                             {/* 目標得点設定 */}
                                             <div className="target-score-section" onClick={(e) => e.stopPropagation()}>
@@ -851,7 +853,7 @@ ${topicsStr}
             </main>
 
             <footer>
-                <p>© 2026 AI Quiz Master</p>
+                <p>© 2026 AI Quiz Generator - Custom Realm</p>
             </footer>
         </div>
     )

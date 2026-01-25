@@ -52,7 +52,14 @@ h1 {
     font-weight: 800;
     background: linear-gradient(135deg, #fff 0%, #a0a0a0 100%);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
+}
+
+nav {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
 }
 
 /* --- ポータル（ジャンル選択）独自のスタイル --- */
@@ -175,6 +182,39 @@ button.active {
     margin-left: 1rem;
 }
 
+.list-header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.import-controls {
+    display: flex;
+    gap: 1rem;
+}
+
+.btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    background: var(--glass-bg);
+    transition: all 0.2s;
+    height: 38px;
+    box-sizing: border-box;
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
 /* --- ダッシュボード（クイズ作成・一覧） --- */
 .dashboard-grid {
     display: grid;
@@ -210,9 +250,32 @@ button.active {
 }
 
 .topics-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-    gap: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+}
+
+.topic-chip {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.topic-chip:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent-blue);
+}
+
+.topic-chip.selected {
+    background: var(--accent-blue);
+    border-color: var(--accent-blue);
+    color: white;
+    box-shadow: 0 0 15px var(--accent-blue-glow);
 }
 
 textarea {
@@ -244,21 +307,108 @@ textarea {
     border: 1px solid var(--glass-border);
     border-radius: 16px;
     padding: 1.5rem;
-    margin-bottom: 1rem;
-    transition: transform 0.2s;
+    margin-bottom: 2rem;
+    transition: all 0.2s;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
 }
 
 .quiz-card:hover {
-    transform: translateX(5px);
-    background: rgba(255, 255, 255, 0.05);
+    transform: translateY(-5px);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--accent-blue);
+    box-shadow: 0 10px 30px -10px var(--accent-blue-glow);
 }
 
-.play-btn {
-    margin-top: 1.5rem;
-    width: 100%;
+.quiz-card::after {
+    content: '挑戦する →';
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    font-size: 0.8rem;
+    color: var(--success);
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.quiz-card:hover::after {
+    opacity: 1;
+}
+
+/* --- 目標得点設定 --- */
+.target-score-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--glass-border);
+}
+
+.target-display {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.target-edit {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.target-input {
+    width: 60px;
+    padding: 0.3rem 0.5rem;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--glass-border);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.btn-edit,
+.btn-save,
+.btn-cancel {
+    padding: 0.3rem 0.8rem;
+    font-size: 0.8rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-edit {
+    background: rgba(88, 166, 255, 0.1);
+    border: 1px solid var(--accent-blue);
+    color: var(--accent-blue);
+}
+
+.btn-edit:hover {
+    background: var(--accent-blue);
+    color: white;
+}
+
+.btn-save {
+    background: rgba(0, 255, 136, 0.1);
+    border: 1px solid var(--success);
+    color: var(--success);
+}
+
+.btn-save:hover {
     background: var(--success);
     color: #000;
-    border: none;
+}
+
+.btn-cancel {
+    background: rgba(255, 77, 77, 0.1);
+    border: 1px solid var(--danger);
+    color: var(--danger);
+}
+
+.btn-cancel:hover {
+    background: var(--danger);
+    color: white;
 }
 
 /* --- プレイ画面 --- */
@@ -287,6 +437,82 @@ textarea {
     font-size: 1.1rem;
     text-align: left;
     background: rgba(255, 255, 255, 0.05);
+    transition: all 0.2s;
+}
+
+.option-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent-blue);
+}
+
+.option-btn.correct {
+    background: rgba(0, 255, 136, 0.15) !important;
+    border-color: var(--success) !important;
+    color: var(--success) !important;
+    box-shadow: 0 0 15px rgba(0, 255, 136, 0.2);
+}
+
+.option-btn.wrong {
+    background: rgba(255, 77, 77, 0.15) !important;
+    border-color: var(--danger) !important;
+    color: var(--danger) !important;
+}
+
+.explanation-box {
+    margin-top: 2.5rem;
+    padding: 2rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 16px;
+    border-left: 4px solid var(--accent-blue);
+    animation: slideIn 0.4s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.correct-text {
+    color: var(--success);
+    font-weight: 800;
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.wrong-text {
+    color: var(--danger);
+    font-weight: 800;
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.explanation-text {
+    color: var(--text-primary);
+    line-height: 1.8;
+}
+
+.next-btn {
+    margin-top: 2rem;
+    width: 100%;
+    padding: 1.2rem;
+    background: var(--accent-blue);
+    border: none;
+    color: white;
+    font-weight: 700;
+    font-size: 1.1rem;
+    box-shadow: 0 5px 15px var(--accent-blue-glow);
+}
+
+.next-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px var(--accent-blue-glow);
 }
 
 /* --- アニメーション --- */
@@ -304,6 +530,219 @@ textarea {
 
 main>* {
     animation: fadeIn 0.6s ease-out forwards;
+}
+
+/* --- 結果画面 --- */
+.result-box {
+    max-width: 700px;
+    margin: 0 auto;
+    text-align: center;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    padding: 3rem;
+}
+
+.result-box h2 {
+    font-size: 2rem;
+    margin-bottom: 2rem;
+}
+
+.score-percentage {
+    font-size: 4rem;
+    font-weight: 800;
+    color: var(--success);
+    margin: 1rem 0;
+    text-shadow: 0 0 30px var(--success);
+}
+
+.result-message {
+    font-size: 1.3rem;
+    margin: 1.5rem 0;
+    color: var(--text-primary);
+}
+
+.score-history-section {
+    margin: 3rem 0;
+    padding: 2rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 16px;
+}
+
+.score-history-section h3 {
+    font-size: 1.3rem;
+    margin-bottom: 1.5rem;
+    color: var(--text-primary);
+}
+
+.score-chart {
+    display: block;
+    margin: 0 auto;
+    max-width: 100%;
+}
+
+.result-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2.5rem;
+    justify-content: center;
+}
+
+.retry-btn {
+    padding: 1.2rem 2rem;
+    background: var(--success);
+    border: none;
+    color: #000;
+    font-weight: 700;
+    font-size: 1.1rem;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.retry-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 255, 136, 0.3);
+}
+
+.return-btn {
+    padding: 1.2rem 2rem;
+    background: var(--accent-blue);
+    border: none;
+    color: white;
+    font-weight: 700;
+    font-size: 1.1rem;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.return-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px var(--accent-blue-glow);
+}
+
+/* --- 履歴リセットボタン --- */
+.btn-danger {
+    background: rgba(255, 77, 77, 0.1) !important;
+    border-color: var(--danger) !important;
+    color: var(--danger) !important;
+}
+
+.btn-danger:hover {
+    background: var(--danger) !important;
+    color: white !important;
+}
+
+/* --- 設定画面 --- */
+.settings-page {
+    max-width: 700px;
+    margin: 0 auto;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    padding: 3rem;
+}
+
+.settings-page h2 {
+    margin-bottom: 2rem;
+    font-size: 2rem;
+}
+
+.form-group {
+    margin-bottom: 2.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 1.2rem;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    color: var(--text-primary);
+    font-size: 1.1rem;
+    transition: all 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 15px var(--accent-blue-glow);
+}
+
+.api-key-row {
+    display: flex;
+    gap: 1rem;
+}
+
+.api-key-row input {
+    flex: 1;
+}
+
+.delete-key-btn {
+    padding: 1.2rem 1.5rem;
+    background: transparent;
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.delete-key-btn:hover:not(:disabled) {
+    background: var(--danger);
+    color: white;
+}
+
+.delete-key-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.model-select {
+    cursor: pointer;
+}
+
+.model-select option {
+    background: #1a1d23;
+    color: var(--text-primary);
+    padding: 0.8rem;
+}
+
+.hint {
+    margin-top: 0.8rem;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.save-back-btn {
+    width: 100%;
+    padding: 1.2rem;
+    margin-top: 2rem;
+    background: var(--accent-blue);
+    border: none;
+    color: white;
+    font-size: 1.1rem;
+    font-weight: 700;
+    box-shadow: 0 5px 15px var(--accent-blue-glow);
+}
+
+.save-back-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px var(--accent-blue-glow);
 }
 
 /* レスポンシブ対応 */
