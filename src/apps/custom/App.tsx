@@ -132,6 +132,22 @@ interface ScoreChartProps {
 
 const ScoreChart: React.FC<ScoreChartProps> = ({ history }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [chartWidth, setChartWidth] = useState(500);
+
+    // 親要素の幅に合わせてキャンバスサイズを調整
+    useEffect(() => {
+        const updateSize = () => {
+            if (containerRef.current) {
+                const width = containerRef.current.clientWidth;
+                setChartWidth(width);
+            }
+        };
+
+        updateSize();
+        window.addEventListener('resize', updateSize);
+        return () => window.removeEventListener('resize', updateSize);
+    }, []);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -140,15 +156,22 @@ const ScoreChart: React.FC<ScoreChartProps> = ({ history }) => {
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        // キャンバスサイズ
-        const width = canvas.width;
-        const height = canvas.height;
+        // 解像度対応（高画質化）
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = chartWidth * dpr;
+        canvas.height = 300 * dpr;
+        ctx.scale(dpr, dpr);
+
+        const width = chartWidth;
+        const height = 300;
         const padding = 40;
         const graphWidth = width - padding * 2;
         const graphHeight = height - padding * 2;
 
         // クリア
         ctx.clearRect(0, 0, width, height);
+
+        if (graphWidth <= 0) return; // 幅が小さすぎる場合は描画しない
 
         // 背景
         ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
@@ -233,9 +256,13 @@ const ScoreChart: React.FC<ScoreChartProps> = ({ history }) => {
             ctx.fillText(`${record.percentage}%`, x, y - 10);
         });
 
-    }, [history]);
+    }, [history, chartWidth]);
 
-    return <canvas ref={canvasRef} width={500} height={300} className="score-chart" />;
+    return (
+        <div ref={containerRef} style={{ width: '100%', maxWidth: '600px', margin: '0 auto' }}>
+            <canvas ref={canvasRef} style={{ width: '100%', height: '300px', display: 'block' }} className="score-chart" />
+        </div>
+    );
 };
 
 /**
@@ -262,6 +289,9 @@ function App() {
     const [pasteText, setPasteText] = useState('')
     const [isPasting, setIsPasting] = useState(false)
     const [editingTarget, setEditingTarget] = useState<{ quizId: string; value: string } | null>(null)
+
+    // リファレンス
+    const listSectionRef = useRef<HTMLElement>(null)
 
     // --- 副作用 (Effects) ---
 
@@ -358,6 +388,11 @@ ${difficulty}
             setCurrentQuiz(newQuiz)
             setView('play')
             resetQuiz()
+
+            // 生成後にリスト部分までスムーズスクロール（モバイル用）
+            setTimeout(() => {
+                listSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
         } catch (e: any) {
             console.error('Quiz Generation Error Details:', e);
             const errorMsg = e.message || '不明なエラー';
@@ -621,7 +656,7 @@ ${difficulty}
                         </section>
 
                         {/* リストパネル */}
-                        <section className="list-section">
+                        <section className="list-section" ref={listSectionRef}>
                             <div className="list-header">
                                 <h2>作成済みの問題</h2>
                                 <div className="import-controls">

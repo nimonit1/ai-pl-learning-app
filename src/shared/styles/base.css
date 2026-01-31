@@ -77,8 +77,8 @@ nav {
 
 .genre-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
     margin-bottom: 4rem;
 }
 
@@ -746,12 +746,61 @@ main>* {
 }
 
 /* レスポンシブ対応 */
-@media (max-width: 900px) {
+@media (max-width: 768px) {
+    .container {
+        padding: 1rem;
+    }
+
+    header {
+        flex-direction: column;
+        gap: 1.5rem;
+        text-align: center;
+    }
+
+    h1 {
+        font-size: 1.8rem;
+    }
+
+    nav {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
     .dashboard-grid {
-        grid-template-columns: 1fr;
+        display: flex;
+        flex-direction: column-reverse;
+        /* リストを上に、生成を下に */
+        gap: 1.5rem;
+    }
+
+    .create-section,
+    .list-section {
+        padding: 1.2rem;
     }
 
     .options-grid {
         grid-template-columns: 1fr;
+    }
+
+    .question-box {
+        padding: 1.5rem;
+    }
+
+    .result-box {
+        padding: 2rem 1rem;
+    }
+
+    .score-percentage {
+        font-size: 3rem;
+    }
+
+    .result-actions {
+        flex-direction: column;
+    }
+
+    .retry-btn,
+    .return-btn {
+        width: 100%;
     }
 }
