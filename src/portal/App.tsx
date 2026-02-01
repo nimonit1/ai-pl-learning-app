@@ -4,24 +4,24 @@
 const GENRES = [
     {
         id: 'programming',
-        title: 'Programming',
-        description: 'Master code, logic, and algorithms.',
+        title: 'プログラミング',
+        description: 'コード、ロジック、アルゴリズムをマスターしよう。',
         icon: '🤖',
         path: 'apps/programming/index.html',
         color: 'var(--accent-blue)'
     },
     {
         id: 'custom',
-        title: 'Custom Realm',
-        description: 'Create quizzes for any topic you imagine.',
+        title: 'カスタム生成',
+        description: '好きなテーマでAIがクイズを作成します。',
         icon: '✨',
         path: 'apps/custom/index.html',
         color: 'var(--accent-purple)'
     },
     {
         id: 'history',
-        title: 'History',
-        description: 'Journey through time and civilizations.',
+        title: '歴史（準備中）',
+        description: '時間と文明を巡る旅へ。',
         icon: '🏛️',
         path: '#', // 後日追加予定
         color: 'var(--accent-orange)',
@@ -29,8 +29,8 @@ const GENRES = [
     },
     {
         id: 'cooking',
-        title: 'Cooking',
-        description: 'Culinary arts, recipes, and flavors.',
+        title: '料理（準備中）',
+        description: 'レシピ、テクニック、食の知識。',
         icon: '👨‍🍳',
         path: '#', // 後日追加予定
         color: 'var(--accent-purple)',
@@ -45,8 +45,9 @@ function App() {
     return (
         <div className="container portal-container">
             <header className="portal-header">
-                <h1>AI QUIZ NEXUS</h1>
-                <p className="subtitle">Choose your realm to start learning</p>
+                <h1>TeraQ</h1>
+                <p className="subtitle">学ぶジャンルを選んでスタート（AI寺子屋）</p>
+                <a href="apps/help/index.html" className="help-link">アプリについて / 使い方</a>
             </header>
 
             <main className="portal-main">
@@ -63,7 +64,7 @@ function App() {
                                 <h2>{genre.title}</h2>
                                 <p>{genre.description}</p>
                             </div>
-                            {genre.disabled && <span className="coming-soon">Coming Soon</span>}
+                            {genre.disabled && <span className="coming-soon">準備中</span>}
                         </div>
                     ))}
                 </div>

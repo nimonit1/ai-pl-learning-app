@@ -20,6 +20,7 @@ export default defineConfig({
                 main: resolve(__dirname, 'index.html'),
                 programming: resolve(__dirname, 'apps/programming/index.html'),
                 custom: resolve(__dirname, 'apps/custom/index.html'),
+                help: resolve(__dirname, 'apps/help/index.html'),
             },
         },
     },

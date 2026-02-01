@@ -218,12 +218,23 @@ button.active {
 /* --- ダッシュボード（クイズ作成・一覧） --- */
 .dashboard-grid {
     display: grid;
-    grid-template-columns: 1.2fr 1fr;
+    grid-template-columns: 1fr 1.2fr;
     gap: 2rem;
 }
 
-.create-section,
+.create-section {
+    order: 2;
+    /* 生成パネルを右側へ */
+    background: var(--glass-bg);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    padding: 2rem;
+}
+
 .list-section {
+    order: 1;
+    /* リストを左側へ */
     background: var(--glass-bg);
     backdrop-filter: blur(8px);
     border: 1px solid var(--glass-border);

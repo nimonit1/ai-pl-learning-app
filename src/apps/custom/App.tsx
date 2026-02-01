@@ -471,7 +471,7 @@ ${difficulty}
 
     // クイズの削除
     const deleteQuiz = (id: string) => {
-        if (!window.confirm('この問題を削除しますか？')) return
+        if (!window.confirm('このクイズを削除しますか？')) return
 
         // 履歴も一緒に削除
         deleteQuizHistory(id)
@@ -558,9 +558,9 @@ ${difficulty}
     return (
         <div className="container">
             <header>
-                <h1 onClick={() => setView('dashboard')} style={{ cursor: 'pointer' }}>AI Quiz Generator (Custom)</h1>
+                <h1 onClick={() => setView('dashboard')} style={{ cursor: 'pointer' }}>TeraQ (Custom Realm)</h1>
                 <nav>
-                    <button onClick={() => setView('dashboard')} className={view === 'dashboard' ? 'active' : ''}>ホーム</button>
+                    <button onClick={() => setView('dashboard')} className={view === 'dashboard' ? 'active' : ''}>クイズ</button>
                     <button onClick={() => setView('settings')} className={view === 'settings' ? 'active' : ''}>設定</button>
                     <button onClick={() => window.location.href = '../../index.html'} className="btn-portal">ジャンル選択へ</button>
                 </nav>
@@ -572,7 +572,7 @@ ${difficulty}
                     <div className="dashboard-grid">
                         {/* 生成パネル */}
                         <section className="create-section">
-                            <h2>オリジナル問題を作る</h2>
+                            <h2>新しくクイズを生成する</h2>
                             <div className="generator-container">
                                 <div className="setup-panel">
                                     <div className="setup-group">
@@ -658,7 +658,7 @@ ${difficulty}
                         {/* リストパネル */}
                         <section className="list-section" ref={listSectionRef}>
                             <div className="list-header">
-                                <h2>作成済みの問題</h2>
+                                <h2>作成済みのクイズ</h2>
                                 <div className="import-controls">
                                     <button className="btn-secondary" onClick={() => setIsPasting(!isPasting)}>
                                         {isPasting ? '閉じる' : 'テキスト取込'}
@@ -688,7 +688,7 @@ ${difficulty}
                             )}
 
                             {quizzes.length === 0 ? (
-                                <p>まだ問題がありません。左のパネルから好きなジャンルで作成してみましょう。</p>
+                                <p>まだクイズがありません。左のパネルから好きなジャンルで作成してみましょう。</p>
                             ) : (
                                 <div className="quiz-list">
                                     {quizzes.map(quiz => (
@@ -755,7 +755,7 @@ ${difficulty}
                                 <div className="quiz-header">
                                     <div className="quiz-info">
                                         <span className="quiz-title-small">{currentQuiz.title}</span>
-                                        <span>問題 {currentQuestionIndex + 1} / {currentQuiz.questions.length}</span>
+                                        <span>Q. {currentQuestionIndex + 1} / {currentQuiz.questions.length}</span>
                                     </div>
                                     <div className="progress-bar">
                                         <div
@@ -832,7 +832,7 @@ ${difficulty}
                                         setCurrentQuiz(shuffledQuiz);
                                         resetQuiz();
                                     }}>もう一度挑戦</button>
-                                    <button className="return-btn" onClick={() => setView('dashboard')}>ダッシュボードに戻る</button>
+                                    <button className="return-btn" onClick={() => setView('dashboard')}>クイズ一覧に戻る</button>
                                 </div>
                             </div>
                         )}

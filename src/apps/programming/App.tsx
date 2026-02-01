@@ -444,10 +444,10 @@ ${topicsStr}
     // クイズの削除
     const deleteQuiz = (id: string) => {
         if (id.startsWith('default-')) {
-            alert('デフォルト問題は削除できません。')
+            alert('公式クイズは削除できません。')
             return
         }
-        if (!window.confirm('この問題を削除しますか？')) return
+        if (!window.confirm('このクイズを削除しますか？')) return
 
         // 履歴も一緒に削除
         deleteQuizHistory(id)
@@ -533,9 +533,9 @@ ${topicsStr}
     return (
         <div className="container">
             <header>
-                <h1 onClick={() => setView('dashboard')} style={{ cursor: 'pointer' }}>AI Quiz Master (Programming)</h1>
+                <h1 onClick={() => setView('dashboard')} style={{ cursor: 'pointer' }}>TeraQ (Programming)</h1>
                 <nav>
-                    <button onClick={() => setView('dashboard')} className={view === 'dashboard' ? 'active' : ''}>ホーム</button>
+                    <button onClick={() => setView('dashboard')} className={view === 'dashboard' ? 'active' : ''}>クイズ</button>
                     <button onClick={() => setView('settings')} className={view === 'settings' ? 'active' : ''}>設定</button>
                     <button onClick={() => window.location.href = '../../index.html'} className="btn-portal">ジャンル選択へ</button>
                 </nav>
@@ -547,7 +547,7 @@ ${topicsStr}
                     <div className="dashboard-grid">
                         {/* 生成パネル */}
                         <section className="create-section">
-                            <h2>新しく問題を生成する</h2>
+                            <h2>新しくクイズを生成する</h2>
                             <div className="generator-container">
                                 <div className="setup-panel">
                                     <div className="setup-group">
@@ -621,13 +621,13 @@ ${topicsStr}
                         {/* リストパネル */}
                         <section className="list-section">
                             <div className="list-header">
-                                <h2>作成済みの問題</h2>
+                                <h2>作成済みのクイズ</h2>
                                 <div className="import-controls">
                                     <button className="btn-secondary" onClick={() => setIsPasting(!isPasting)}>
-                                        {isPasting ? '閉じる' : 'テキストから取り込む'}
+                                        {isPasting ? '閉じる' : 'テキスト取込'}
                                     </button>
                                     <label className="btn-secondary">
-                                        JSONファイル読込
+                                        JSON読込
                                         <input type="file" accept=".json" onChange={importQuiz} hidden />
                                     </label>
                                     <button className="btn-secondary btn-danger" onClick={handleResetAllHistory} title="全履歴リセット">
@@ -651,7 +651,7 @@ ${topicsStr}
                             )}
 
                             {quizzes.length === 0 ? (
-                                <p>まだ問題がありません。上のパネルから作成してみましょう。</p>
+                                <p>まだクイズがありません。上のパネルから作成してみましょう。</p>
                             ) : (
                                 <div className="quiz-list">
                                     {quizzes.map(quiz => (
@@ -718,7 +718,7 @@ ${topicsStr}
                                 <div className="quiz-header">
                                     <div className="quiz-info">
                                         <span className="quiz-title-small">{currentQuiz.title}</span>
-                                        <span>問題 {currentQuestionIndex + 1} / {currentQuiz.questions.length}</span>
+                                        <span>Q. {currentQuestionIndex + 1} / {currentQuiz.questions.length}</span>
                                     </div>
                                     <div className="progress-bar">
                                         <div
@@ -795,7 +795,7 @@ ${topicsStr}
                                         setCurrentQuiz(shuffledQuiz);
                                         resetQuiz();
                                     }}>もう一度挑戦</button>
-                                    <button className="return-btn" onClick={() => setView('dashboard')}>ダッシュボードに戻る</button>
+                                    <button className="return-btn" onClick={() => setView('dashboard')}>クイズ一覧に戻る</button>
                                 </div>
                             </div>
                         )}
