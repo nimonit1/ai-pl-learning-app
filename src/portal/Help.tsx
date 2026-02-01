@@ -1,4 +1,4 @@
-import React from 'react'
+
 
 /**
  * ヘルプ（アプリ紹介）ページコンポーネント
