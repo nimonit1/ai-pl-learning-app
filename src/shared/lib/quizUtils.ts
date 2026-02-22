@@ -4,7 +4,15 @@
  * @returns シャッフル後の問題データ
  */
 export function shuffleQuestion(q: any) {
-    const optionsWithIndex = q.options.map((opt: string, i: number) => ({ opt, isCorrect: i === q.answerIndex }));
+    if (!q || !Array.isArray(q.options)) {
+        console.error("Invalid question data:", q);
+        return q;
+    }
+
+    // 選択肢が文字列でない場合は強制的に文字列化する
+    const options = q.options.map((opt: any) => typeof opt === 'string' ? opt : String(opt));
+
+    const optionsWithIndex = options.map((opt: string, i: number) => ({ opt, isCorrect: i === q.answerIndex }));
     const shuffled = [...optionsWithIndex];
 
     // フィッシャー–イェーツのシャッフルアルゴリズム
@@ -26,6 +34,14 @@ export function shuffleQuestion(q: any) {
  * @returns アプリ内で扱える形式のクイズデータ
  */
 export function processQuizData(data: any) {
+    if (!data || !Array.isArray(data.questions)) {
+        throw new Error("クイズデータの形式が正しくありません（questions配列が見つかりません）。");
+    }
+
+    if (data.questions.length === 0) {
+        throw new Error("クイズの問題が1件も見つかりませんでした。");
+    }
+
     const randomizedQuestions = data.questions.map((q: any) => shuffleQuestion(q));
 
     return {
@@ -35,3 +51,4 @@ export function processQuizData(data: any) {
         createdAt: Date.now()
     };
 }
+

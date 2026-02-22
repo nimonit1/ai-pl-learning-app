@@ -262,6 +262,7 @@ function App() {
     // 生成・プレイ用の状態
     const [selectedLang, setSelectedLang] = useState<'C' | 'python' | 'VBA'>('python')
     const [difficulty, setDifficulty] = useState('中級')
+    const [questionCount, setQuestionCount] = useState(5)
     const [selectedTopics, setSelectedTopics] = useState<string[]>([])
     const [customPrompt, setCustomPrompt] = useState('')
     const [isGenerating, setIsGenerating] = useState(false)
@@ -292,16 +293,40 @@ function App() {
         setQuizzes([...userQuizzes, ...defaults])
     }, [])
 
+    // 難易度の日本語→英語マッピング
+    const difficultyMap: Record<string, string> = { '初級': 'Beginner', '中級': 'Intermediate', '上級': 'Advanced' };
+
+    // トピックの日本語→英語マッピング
+    const topicMap: Record<string, string> = {
+        'ポインタ': 'Pointers', 'メモリ管理': 'Memory Management',
+        '構造体': 'Structs', '標準ライブラリ': 'Standard Library',
+        '制御構文': 'Control Flow', '配列・文字列': 'Arrays and Strings',
+        'リスト内包表記': 'List Comprehensions', 'デコレータ': 'Decorators',
+        'クラス・継承': 'Classes and Inheritance', '例外処理': 'Exception Handling',
+        'データ型・辞書': 'Data Types and Dictionaries',
+        'セル操作(Range/Cells)': 'Cell Operations (Range/Cells)', 'ループ処理': 'Loop Processing',
+        'ユーザーフォーム': 'UserForms', 'イベント': 'Events',
+        '変数の型・スコープ': 'Variable Types and Scope', 'エラーハンドリング': 'Error Handling'
+    };
+
     // 選択状態が変わるたびにプロンプトを自動更新
     useEffect(() => {
-        const topicsStr = selectedTopics.length > 0 ? `テーマは「${selectedTopics.join(', ')}」に関連させてください。` : ""
-        const titleTopics = selectedTopics.length > 0 ? ` - ${selectedTopics.join('/')}` : ""
+        const diffEn = difficultyMap[difficulty] || 'Intermediate';
+        const topicsEn = selectedTopics.map(t => topicMap[t] || t);
+        const topicsStr = topicsEn.length > 0 ? `\nFocus on the following topics: ${topicsEn.join(', ')}` : '';
+        const titleTopics = selectedTopics.length > 0 ? ` - ${selectedTopics.join('/')}` : '';
         const prompt = `
-プログラミング言語「${selectedLang}」の学習用クイズを、難易度「${difficulty}」で5問作成してください。
-${topicsStr}
-※正解の選択肢の位置（answerIndex）が特定の番号に偏らないよう、問題ごとにランダムに変更してください。
+Create ${questionCount} multiple-choice quiz questions (4 options each) for learning the programming language "${selectedLang}".
 
-回答形式は以下のJSONフォーマットのみを返してください。解説等は不要です。
+Difficulty: ${diffEn}${topicsStr}
+
+IMPORTANT RULES:
+- Randomize the position of the correct answer (answerIndex) across questions. Do not always place the correct answer at the same index.
+- All output MUST be in plain text only. Do NOT use LaTeX, special rendering formats, or any notation that may disappear when copied and pasted. Use only standard text characters.
+- Every field (especially each value in the "options" array) MUST contain concrete, non-empty content. Never use empty strings ("").
+- All question text, options, and explanations MUST be written in Japanese.
+
+Return ONLY the following JSON format. Do not include any explanation outside the JSON.
 
 {
   "title": "${selectedLang}クイズ (${difficulty}${titleTopics})",
@@ -318,7 +343,7 @@ ${topicsStr}
 }
 `.trim()
         setCustomPrompt(prompt)
-    }, [selectedLang, difficulty, selectedTopics])
+    }, [selectedLang, difficulty, selectedTopics, questionCount])
 
     // --- ハンドラー (Handlers) ---
 
@@ -389,10 +414,22 @@ ${topicsStr}
     const handleManualImport = () => {
         if (!pasteText.trim()) return;
         try {
-            const jsonMatch = pasteText.match(/\{[\s\S]*\}/);
-            if (!jsonMatch) throw new Error("JSONが見つかりません");
+            // 最も外側の { と } を探す
+            const firstBrace = pasteText.indexOf('{');
+            const lastBrace = pasteText.lastIndexOf('}');
 
-            const data = JSON.parse(jsonMatch[0]);
+            if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+                throw new Error("テキストの中にJSON形式のデータが見つかりませんでした。");
+            }
+
+            const jsonText = pasteText.substring(firstBrace, lastBrace + 1);
+            let data;
+            try {
+                data = JSON.parse(jsonText);
+            } catch (e) {
+                throw new Error("JSONの解析に失敗しました。コピーした内容が途中で切れていないか確認してください。");
+            }
+
             const newQuiz = processQuizData(data);
 
             const userSaved = localStorage.getItem('ai_quizzes')
@@ -406,10 +443,11 @@ ${topicsStr}
             setPasteText('');
             setIsPasting(false);
             alert('クイズをインポートしました！');
-        } catch {
-            alert('インポートに失敗しました。AIの回答からJSONを正しく抽出できませんでした。');
+        } catch (e: any) {
+            alert(`インポートに失敗しました。\n原因: ${e.message}`);
         }
     }
+
 
     // クイズプレイ情報の初期化
     const resetQuiz = () => {
@@ -594,16 +632,31 @@ ${topicsStr}
                                             ))}
                                         </div>
                                     </div>
+
+                                    <div className="setup-group">
+                                        <label>問題数</label>
+                                        <div className="selector-row">
+                                            {[3, 5, 10].map(num => (
+                                                <button
+                                                    key={num}
+                                                    className={questionCount === num ? 'active' : ''}
+                                                    onClick={() => setQuestionCount(num)}
+                                                >
+                                                    {num}問
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div className="prompt-panel">
                                     <div className="prompt-header">
-                                        <label>生成プロンプト（編集可能）</label>
+                                        <label>生成プロンプト（自動生成・読取専用）</label>
                                         <button className="copy-btn-small" onClick={handleCopyPrompt}>プロンプトをコピー</button>
                                     </div>
                                     <textarea
                                         value={customPrompt}
-                                        onChange={(e) => setCustomPrompt(e.target.value)}
+                                        readOnly
                                         placeholder="プロンプトがここに生成されます..."
                                     />
                                     <button

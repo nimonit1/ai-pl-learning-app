@@ -18,15 +18,20 @@ export async function generateQuizFromPrompt(apiKey: string, prompt: string, mod
         console.log("Geminiからの生応答:", text);
 
         // 応答テキストからJSON部分（{ ... }）のみを抽出
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
+        // 最も外側の { と } を探す
+        const firstBrace = text.indexOf('{');
+        const lastBrace = text.lastIndexOf('}');
+
+        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+            const jsonText = text.substring(firstBrace, lastBrace + 1);
             try {
-                return JSON.parse(jsonMatch[0]);
+                return JSON.parse(jsonText);
             } catch (parseError) {
                 console.error("JSONパースエラー:", parseError);
                 throw new Error("JSONの解析に失敗しました。AIの回答形式が正しくない可能性があります。");
             }
         }
+
         throw new Error("JSON形式のデータが見つかりませんでした。");
     } catch (error) {
         console.error("Gemini APIエラー:", error);
